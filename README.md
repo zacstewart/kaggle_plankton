@@ -1,0 +1,7 @@
+# Performance log
+
+### 02-17
+Crop images, resized to 24x24, add FFT. SVC
+Scores: [2.2615325831252164, 2.2479985458082288, 2.241751492483008]
+Mean score: 2.2504275404721512
+Score STD: 0.0082562258551487043
