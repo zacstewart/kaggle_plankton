@@ -1,10 +1,17 @@
-import pdb
-from skimage.io import imread_collection
-from sklearn.base import TransformerMixin
+from scipy import fftpack
 from skimage.transform import resize
+from sklearn.base import TransformerMixin
 import math
 import numpy as np
 
+
+class IdentityTransformer(TransformerMixin):
+
+    def fit(self, x, y, **kwargs):
+        return self
+
+    def transform(self, x, **kwargs):
+        return x
 
 class NormalizeImages(TransformerMixin):
 
@@ -75,8 +82,23 @@ class ResampleImages(TransformerMixin):
     def transform(self, x, **kwargs):
         n, m = x.shape
         size = np.sqrt(m)
-        output = np.full((len(x), self.height, self.width), 255)
+        output = np.empty((len(x), self.height, self.width))
         for i, image in enumerate(x):
             image = image.reshape((size, size))
             output[i] = resize(image, (self.height, self.width))
+        return output.reshape((len(x), -1))
+
+
+class FftTransformer(TransformerMixin):
+
+    def fit(self, x, y, **kwargs):
+        return self
+
+    def transform(self, x, **kwargs):
+        n, m = x.shape
+        size = np.sqrt(m)
+        output = np.empty((len(x), size, size))
+        for i, image in enumerate(x):
+            image = image.reshape((size, size))
+            output[i] = np.abs(fftpack.fftshift(fftpack.fft2(image)))
         return output.reshape((len(x), -1))

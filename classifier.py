@@ -3,8 +3,9 @@ from skimage.io import imread_collection
 from sklearn import metrics
 from sklearn.cross_validation import StratifiedKFold
 from sklearn.svm import SVC
-from sklearn.pipeline import Pipeline
-from transformers import NormalizeImages, ResampleImages
+from sklearn.pipeline import Pipeline, FeatureUnion
+from transformers import (
+    IdentityTransformer, NormalizeImages, ResampleImages, FftTransformer)
 import numpy as np
 import os
 from IPython.core.debugger import Tracer
@@ -18,6 +19,8 @@ for folder in folders:
                 example in os.listdir(os.path.join('data/train', folder))]
     train = np.concatenate((train, examples), axis=0)
 
+np.random.seed(0)
+np.random.shuffle(train)
 train_y = train[:, 0]
 train_x = train[:, 1]
 classes = list(set(train_y))
@@ -30,6 +33,10 @@ kf = StratifiedKFold(train_y, n_folds=3, shuffle=True)
 pipeline = Pipeline([
     ('normalize_imgs', NormalizeImages(capture_percentage=.8)),
     ('resized_imgs', ResampleImages(32)),
+    ('features', FeatureUnion([
+        ('image', IdentityTransformer()),
+        ('fft', FftTransformer())
+    ])),
     ('classifier', SVC(probability=True, verbose=True))
 ])
 
