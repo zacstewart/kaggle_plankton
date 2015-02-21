@@ -34,4 +34,4 @@ x = T.matrix('x')
 da = DenoisingAutoencoder(np_rng=rng, theano_rng=theano_rng, input=x,
                           n_visible=106 * 106, n_hidden=1800)
 
-stochastic_gradient_descent(da, 0.1, train_x, 100, 3)
+stochastic_gradient_descent(da, 0.1, train_x, 1000, 10)

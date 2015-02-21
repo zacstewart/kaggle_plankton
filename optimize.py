@@ -11,7 +11,7 @@ def stochastic_gradient_descent(
     n_train_batches = train_set_x.get_value(borrow=True).shape[0] // batch_size
 
     cost, updates = da.cost_updates(
-        corruption_level=0.2, learning_rate=learning_rate)
+        corruption_level=0.3, learning_rate=learning_rate)
 
     train = theano.function(
         [index], cost, updates=updates,
