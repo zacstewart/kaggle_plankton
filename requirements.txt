@@ -17,4 +17,5 @@ scikit-learn==0.15.2
 scipy==0.15.1
 seaborn==0.5.1
 six==1.9.0
+Theano==0.6.0
 tornado==4.0.2

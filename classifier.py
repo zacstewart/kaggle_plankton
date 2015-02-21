@@ -1,22 +1,21 @@
-from pandas import DataFrame
+from IPython.core.debugger import Tracer
+from autoencoder import DenoisingAutoencoder
+from optimize import stochastic_gradient_descent
 from skimage.io import imread_collection
-from sklearn import metrics
-from sklearn.cross_validation import StratifiedKFold
-from sklearn.svm import SVC
-from sklearn.pipeline import Pipeline, FeatureUnion
-from transformers import (
-    IdentityTransformer, NormalizeImages, ResampleImages, FftTransformer)
+from theano import tensor as T
+from theano.tensor.shared_randomstreams import RandomStreams
 import numpy as np
 import os
-from IPython.core.debugger import Tracer
+
+
 tracer = Tracer()
 
 folders = os.listdir('data/train')
 train = np.empty((0, 2))
 
 for folder in folders:
-    examples = [[folder, os.path.join('data/train', folder, example)] for
-                example in os.listdir(os.path.join('data/train', folder))]
+    examples = [[folder, os.path.join('data/normalized', folder, example)] for
+                example in os.listdir(os.path.join('data/normalized', folder))]
     train = np.concatenate((train, examples), axis=0)
 
 np.random.seed(0)
@@ -26,50 +25,13 @@ train_x = train[:, 1]
 classes = list(set(train_y))
 classes.sort()
 print("Reading train images...")
-train_x = np.array(imread_collection(train_x, conserve_memory=False))
+train_x = np.array(imread_collection(train_x, conserve_memory=False)) / 255
+train_x = train_x.reshape((len(train_x), -1))
 
-kf = StratifiedKFold(train_y, n_folds=3, shuffle=True)
+rng = np.random.RandomState(123)
+theano_rng = RandomStreams(rng.randint(2 ** 30))
+x = T.matrix('x')
+da = DenoisingAutoencoder(np_rng=rng, theano_rng=theano_rng, input=x,
+                          n_visible=106 * 106, n_hidden=1800)
 
-pipeline = Pipeline([
-    ('normalize_imgs', NormalizeImages(capture_percentage=.8)),
-    ('resized_imgs', ResampleImages(32)),
-    ('features', FeatureUnion([
-        ('image', IdentityTransformer()),
-        ('fft', FftTransformer())
-    ])),
-    ('classifier', SVC(probability=True, verbose=True))
-])
-
-print("Cross validating...")
-scores = []
-for fold, (construct_idx, validate_idx) in enumerate(kf):
-    print("Fold {}...".format(fold + 1))
-    pipeline.fit(train_x[construct_idx], train_y[construct_idx])
-    predictions = pipeline.predict_proba(train_x[validate_idx])
-    score = metrics.log_loss(train_y[validate_idx], predictions)
-    scores.append(score)
-
-print("Mean score:", np.mean(scores))
-print("Score std:", np.std(scores))
-print("Raw scores:", scores)
-
-print("Training...")
-
-pipeline.fit(train_x, train_y)
-
-print("Loading test images...")
-
-images = np.array(os.listdir('data/test')).reshape((-1, 1))
-test = np.array([os.path.join('data/test', filename)
-                for filename in os.listdir('data/test')])
-test_x = np.array(imread_collection(test, conserve_memory=False))
-
-print("Predicting...")
-
-probabilities = pipeline.predict_proba(test_x)
-submission = DataFrame(data=probabilities, columns=classes)
-submission['image'] = images
-data = np.append(images, probabilities, axis=1)
-submission.to_csv('submission.csv', index=False)
-
-tracer()
+stochastic_gradient_descent(da, 0.1, train_x, 100, 3)

@@ -36,7 +36,7 @@ class NormalizeImages(TransformerMixin):
         return self
 
     def transform(self, x):
-        output = np.full((len(x), self.size, self.size), 0)
+        output = np.full((len(x), self.size, self.size), 1.0)
         for i, image in enumerate(x):
             (image_height, image_width) = image.shape
             diff_y = math.floor(float(self.size - image_height) / 2.0)
@@ -66,8 +66,8 @@ class NormalizeImages(TransformerMixin):
                 i,
                 output_offset_y:(output_offset_y+height),
                 output_offset_x:(output_offset_x+width)
-            ] = 255.0 - crop
-        return output.reshape((len(x), -1)) / 255
+            ] = crop
+        return output.reshape((len(x), -1))
 
 
 class ResampleImages(TransformerMixin):
