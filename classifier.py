@@ -1,9 +1,11 @@
 from IPython.core.debugger import Tracer
+from PIL import Image
 from autoencoder import DenoisingAutoencoder
 from optimize import stochastic_gradient_descent
 from skimage.io import imread_collection
 from theano import tensor as T
 from theano.tensor.shared_randomstreams import RandomStreams
+from images import tile_raster_images
 import numpy as np
 import os
 
@@ -35,3 +37,11 @@ da = DenoisingAutoencoder(np_rng=rng, theano_rng=theano_rng, input=x,
                           n_visible=106 * 106, n_hidden=1800)
 
 stochastic_gradient_descent(da, 0.1, train_x, 1000, 10)
+
+image = Image.fromarray(tile_raster_images(
+    X=da.W.get_value(borrow=True).T,
+    img_shape=(106, 106),
+    tile_shape=(20, 25),
+    tile_spacing=(1, 1)))
+
+image.save('weights.png')
