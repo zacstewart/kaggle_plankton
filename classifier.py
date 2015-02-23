@@ -1,13 +1,12 @@
 from IPython.core.debugger import Tracer
-from PIL import Image
-from autoencoder import DenoisingAutoencoder
+from logistic_regression import LogisticRegression
 from optimize import stochastic_gradient_descent
+from pandas import DataFrame
 from skimage.io import imread_collection
 from theano import tensor as T
-from theano.tensor.shared_randomstreams import RandomStreams
-from images import tile_raster_images
 import numpy as np
 import os
+import theano
 
 
 tracer = Tracer()
@@ -27,22 +26,33 @@ train_y = train[:, 0]
 train_x = train[:, 1]
 classes = list(set(train_y))
 classes.sort()
+i_to_class = dict(zip(range(len(classes)), classes))
+class_to_i = {c: i for i, c in i_to_class.items()}
+train_y = np.array(list(map(lambda y: class_to_i[y], train_y)), dtype=np.int32)
+
 print("Reading train images...")
 train_x = np.array(imread_collection(train_x, conserve_memory=False)) / 255
 train_x = train_x.reshape((len(train_x), -1))
 
-rng = np.random.RandomState(123)
-theano_rng = RandomStreams(rng.randint(2 ** 30))
 x = T.matrix('x')
-da = DenoisingAutoencoder(np_rng=rng, theano_rng=theano_rng, input=x,
-                          n_visible=106 * 106, n_hidden=1800)
+y = T.ivector('y')
+lr = LogisticRegression(input=x, n_in=106 * 106, n_out=len(classes))
+stochastic_gradient_descent(lr, train_x, train_y, x, y, 0.1, 100, 1)
 
-stochastic_gradient_descent(da, 0.1, train_x, 1000, 10)
+predict_proba = theano.function([x], lr.p_of_y_given_x)
 
-image = Image.fromarray(tile_raster_images(
-    X=da.W.get_value(borrow=True).T,
-    img_shape=(106, 106),
-    tile_shape=(20, 25),
-    tile_spacing=(1, 1)))
+print("Loading test set..")
+images = np.array(os.listdir('data/test_normalized'))
+test = np.array([os.path.join('data/test_normalized', filename)
+                for filename in os.listdir('data/test_normalized')])
+test_set_x = np.array(imread_collection(test, conserve_memory=False)) / 255
+test_set_x = test_set_x.reshape((len(test_set_x), -1))
+tracer()
+probabilities = predict_proba(test_set_x)
+submission = DataFrame(
+    data=probabilities,
+    columns=list(map(lambda i: i_to_class[i], range(len(classes)))))
+submission['image'] = images
+submission.to_csv('submission.csv', index=False)
 
-image.save('weights.png')
+tracer()
