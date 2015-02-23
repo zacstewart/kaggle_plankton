@@ -50,7 +50,7 @@ class DenoisingAutoencoder(object):
     def reconstructed_input(self, hidden):
         return T.nnet.sigmoid(T.dot(hidden, self.W_prime) + self.b_prime)
 
-    def cost_updates(self, corruption_level, learning_rate):
+    def cost_updates(self, _y, corruption_level, learning_rate):
         tilde_x = self.corrupted_input(self.x, corruption_level)
         y = self.hidden_values(tilde_x)
         z = self.reconstructed_input(y)
