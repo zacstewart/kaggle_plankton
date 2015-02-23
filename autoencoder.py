@@ -13,7 +13,7 @@ class DenoisingAutoencoder(object):
             theano_rng = RandomStreams(np_rng.randint(2 ** 30))
 
         if not input:
-            input = T.dmatrix(name='input')
+            input = T.matrix(name='input')
 
         if not W:
             initial_W = np.asarray(np_rng.uniform(
