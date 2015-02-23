@@ -16,8 +16,9 @@ folders = os.listdir('data/train')
 train = np.empty((0, 2))
 
 for folder in folders:
-    examples = [[folder, os.path.join('data/normalized', folder, example)] for
-                example in os.listdir(os.path.join('data/normalized', folder))]
+    examples = [
+        [folder, os.path.join('data/train_normalized', folder, example)] for
+        example in os.listdir(os.path.join('data/train_normalized', folder))]
     train = np.concatenate((train, examples), axis=0)
 
 np.random.seed(0)
