@@ -20,7 +20,9 @@ def stochastic_gradient_descent(
         y, learning_rate=learning_rate, **cost_kwargs)
 
     train = theano.function(
-        [index], cost, updates=updates,
+        inputs=[index],
+        outputs=cost,
+        updates=updates,
         givens={
             x: train_set_x[(index * batch_size):((index + 1) * batch_size)],
             y: train_set_y[(index * batch_size):((index + 1) * batch_size)]
