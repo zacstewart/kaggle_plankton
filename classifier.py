@@ -1,5 +1,5 @@
 from IPython.core.debugger import Tracer
-from logistic_regression import LogisticRegression
+from perceptron import MultilayerPerceptron
 from optimize import stochastic_gradient_descent
 from pandas import DataFrame
 from skimage.io import imread_collection
@@ -34,10 +34,18 @@ print("Reading train images...")
 train_x = np.array(imread_collection(train_x, conserve_memory=False)) / 255
 train_x = train_x.reshape((len(train_x), -1))
 
+np_rng = np.random.RandomState(0)
 x = T.matrix('x')
 y = T.ivector('y')
-lr = LogisticRegression(input=x, n_in=106 * 106, n_out=len(classes))
-stochastic_gradient_descent(lr, train_x, train_y, x, y, 0.1, 100, 1)
+lr = MultilayerPerceptron(
+    np_rng=np_rng,
+    input=x,
+    n_in=106 * 106,
+    n_hidden=500,
+    n_out=len(classes))
+
+stochastic_gradient_descent(
+    lr, train_x, train_y, x, y, 0.1, 100, 1, L1_reg=0.0, L2_reg=0.0001)
 
 predict_proba = theano.function([x], lr.p_of_y_given_x)
 
@@ -47,7 +55,6 @@ test = np.array([os.path.join('data/test_normalized', filename)
                 for filename in os.listdir('data/test_normalized')])
 test_set_x = np.array(imread_collection(test, conserve_memory=False)) / 255
 test_set_x = test_set_x.reshape((len(test_set_x), -1))
-tracer()
 probabilities = predict_proba(test_set_x)
 submission = DataFrame(
     data=probabilities,
