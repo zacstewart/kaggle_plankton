@@ -41,7 +41,7 @@ lr = MultilayerPerceptron(
     np_rng=np_rng,
     input=x,
     n_in=106 * 106,
-    n_hidden=500,
+    n_hidden=1000,
     n_out=len(classes))
 
 stochastic_gradient_descent(
