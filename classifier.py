@@ -22,17 +22,24 @@ for folder in folders:
 
 np.random.seed(0)
 np.random.shuffle(train)
+validate = train[:(0.2 * len(train))]
+train = train[(0.2 * len(train)):]
 train_y = train[:, 0]
 train_x = train[:, 1]
+validate_y = validate[:, 0]
+validate_x = validate[:, 1]
 classes = list(set(train_y))
 classes.sort()
 i_to_class = dict(zip(range(len(classes)), classes))
 class_to_i = {c: i for i, c in i_to_class.items()}
 train_y = np.array(list(map(lambda y: class_to_i[y], train_y)), dtype=np.int32)
+validate_y = np.array(list(map(lambda y: class_to_i[y], validate_y)), dtype=np.int32)
 
 print("Reading train images...")
 train_x = np.array(imread_collection(train_x, conserve_memory=False)) / 255
 train_x = train_x.reshape((len(train_x), -1))
+validate_x = np.array(imread_collection(validate_x, conserve_memory=False)) / 255
+validate_x = validate_x.reshape((len(validate_x), -1))
 
 np_rng = np.random.RandomState(0)
 x = T.matrix('x')
@@ -45,8 +52,8 @@ lr = MultilayerPerceptron(
     n_out=len(classes))
 
 stochastic_gradient_descent(
-    lr, train_x, train_y, x, y, learning_rate=0.1, batch_size=200,
-    n_training_epochs=15, L1_reg=0.0, L2_reg=0.0001)
+    lr, train_x, train_y, validate_x, validate_y, x, y, learning_rate=0.1,
+    batch_size=200, n_training_epochs=15, L1_reg=0.0, L2_reg=0.0001)
 
 predict_proba = theano.function([x], lr.p_of_y_given_x)
 

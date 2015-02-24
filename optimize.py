@@ -5,14 +5,23 @@ import theano
 
 
 def stochastic_gradient_descent(
-        model, train_set_x, train_set_y, x, y, learning_rate, batch_size,
-        n_training_epochs, **cost_kwargs):
+        model, train_set_x, train_set_y, validate_set_x, validate_set_y, x, y,
+        learning_rate, batch_size, n_training_epochs,
+        patience_increase=2, improvement_threshold=0.995, **cost_kwargs):
 
+    patience = 10000
     n_train_batches = train_set_x.shape[0] // batch_size
+    n_validate_batches = validate_set_x.shape[0] // batch_size
+    validation_frequency = min(n_train_batches, patience / 2)
+
     train_set_x = theano.shared(
         value=train_set_x.astype(config.floatX), name='train_set_x')
     train_set_y = theano.shared(
         value=train_set_y, name='train_set_y')
+    validate_set_x = theano.shared(
+        value=validate_set_x.astype(config.floatX), name='validate_set_x')
+    validate_set_y = theano.shared(
+        value=validate_set_y, name='validate_set_y')
 
     index = T.lscalar()
 
@@ -28,10 +37,36 @@ def stochastic_gradient_descent(
             y: train_set_y[(index * batch_size):((index + 1) * batch_size)]
         })
 
+    validate = theano.function(
+        inputs=[index],
+        outputs=model.errors(y),
+        givens={
+            x: validate_set_x[(index * batch_size):((index + 1) * batch_size)],
+            y: validate_set_y[(index * batch_size):((index + 1) * batch_size)]
+        })
+
+    best_validation_loss = np.inf
     for epoch in range(n_training_epochs):
-        c = []
+        costs = []
         for batch_index in range(n_train_batches):
-            score = train(batch_index)
-            print("Batch {} score {}".format(batch_index, score))
-            c.append(score)
-        print("Training epoch {} cost {}".format(epoch, np.mean(c)))
+            batch_cost = train(batch_index)
+            costs.append(batch_cost)
+
+            iteration = epoch * n_train_batches + batch_index
+            if (iteration + 1) % validation_frequency == 0:
+                batch_validation_loss = np.mean(
+                    [validate(i) for i in range(n_validate_batches)])
+                print("Epoch {}, batch {}/{}, validation error: {}".format(
+                    epoch, batch_index, n_train_batches, batch_validation_loss
+                ))
+
+                if batch_validation_loss < best_validation_loss:
+                    if (batch_validation_loss <
+                            best_validation_loss * improvement_threshold):
+                        patience = max(patience, iteration * patience_increase)
+                    best_validation_loss = batch_validation_loss
+
+            if iteration >= patience:
+                return
+
+        print("Epoch {} cost: {}".format(epoch, np.mean(costs)))
