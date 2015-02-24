@@ -53,7 +53,7 @@ lr = MultilayerPerceptron(
 
 stochastic_gradient_descent(
     lr, train_x, train_y, validate_x, validate_y, x, y, learning_rate=0.1,
-    batch_size=200, n_training_epochs=15, L1_reg=0.0, L2_reg=0.0001)
+    batch_size=200, n_training_epochs=1000, L1_reg=0.0, L2_reg=0.0001)
 
 predict_proba = theano.function([x], lr.p_of_y_given_x)
 
