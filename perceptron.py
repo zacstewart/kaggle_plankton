@@ -41,13 +41,14 @@ class HiddenLayer(object):
 
 class MultilayerPerceptron(object):
 
-    def __init__(self, np_rng, input, n_in, n_hidden, n_out):
+    def __init__(self, np_rng, input, n_in, n_hidden, n_out,
+                 activation=T.tanh):
         self.hidden_layer = HiddenLayer(
             np_rng=np_rng,
             input=input,
             n_in=n_in,
             n_out=n_hidden,
-            activation=T.tanh)
+            activation=activation)
 
         self.logistic_regression_layer = LogisticRegression(
             input=self.hidden_layer.output,

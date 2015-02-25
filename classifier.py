@@ -49,7 +49,8 @@ lr = MultilayerPerceptron(
     input=x,
     n_in=106 * 106,
     n_hidden=1000,
-    n_out=len(classes))
+    n_out=len(classes),
+    activation=T.nnet.sigmoid)
 
 stochastic_gradient_descent(
     lr, train_x, train_y, validate_x, validate_y, x, y, learning_rate=0.1,
