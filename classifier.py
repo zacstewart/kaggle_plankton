@@ -1,8 +1,10 @@
 from IPython.core.debugger import Tracer
+from cnn import ConvolutionMaxPoolLayer
 from perceptron import MultilayerPerceptron
 from optimize import stochastic_gradient_descent
 from pandas import DataFrame
 from skimage.io import imread_collection
+from theano import config
 from theano import tensor as T
 import numpy as np
 import os
@@ -10,14 +12,16 @@ import theano
 
 
 tracer = Tracer()
+TRAIN_DATA_ROOT = '.'
+TRAIN_DATA_DIR = os.path.join(TRAIN_DATA_ROOT, 'data', 'train_normalized')
 
-folders = os.listdir('data/train')
+folders = os.listdir(TRAIN_DATA_DIR)
 train = np.empty((0, 2))
 
 for folder in folders:
     examples = [
-        [folder, os.path.join('data/train_normalized', folder, example)] for
-        example in os.listdir(os.path.join('data/train_normalized', folder))]
+        [folder, os.path.join(TRAIN_DATA_DIR, folder, example)] for
+        example in os.listdir(os.path.join(TRAIN_DATA_DIR, folder))]
     train = np.concatenate((train, examples), axis=0)
 
 np.random.seed(0)
@@ -36,34 +40,54 @@ train_y = np.array(list(map(lambda y: class_to_i[y], train_y)), dtype=np.int32)
 validate_y = np.array(list(map(lambda y: class_to_i[y], validate_y)), dtype=np.int32)
 
 print("Reading train images...")
+
 train_x = np.array(imread_collection(train_x, conserve_memory=False)) / 255
-train_x = train_x.reshape((len(train_x), -1))
 validate_x = np.array(imread_collection(validate_x, conserve_memory=False)) / 255
-validate_x = validate_x.reshape((len(validate_x), -1))
+validate_x = validate_x.reshape((-1, 1, 106, 106))  # 1-color feature map
+train_x = train_x.reshape((-1, 1, 106, 106))  # 1-color feature map
+
+print("Building network symbolic graph...")
 
 np_rng = np.random.RandomState(0)
-x = T.matrix('x')
+x = T.tensor4('x', dtype=config.floatX)
 y = T.ivector('y')
-lr = MultilayerPerceptron(
+batch_size = 5
+
+layer0 = ConvolutionMaxPoolLayer(
     np_rng=np_rng,
     input=x,
-    n_in=106 * 106,
+    image_shape=(batch_size, 1, 106, 106),
+    filter_shape=(20, 1, 19, 19),
+    pool_size=(2, 2))
+
+layer1 = ConvolutionMaxPoolLayer(
+    np_rng=np_rng,
+    input=layer0.output,
+    image_shape=(batch_size, 20, 44, 44),
+    filter_shape=(50, 20, 11, 11),
+    pool_size=(2, 2))
+
+laye2_input = layer1.output.flatten(2)
+layer2 = MultilayerPerceptron(
+    np_rng=np_rng,
+    input=laye2_input,
+    n_in=50 * 17 * 17,
     n_hidden=1000,
     n_out=len(classes),
     activation=T.nnet.sigmoid)
 
+print("Training network...")
 stochastic_gradient_descent(
-    lr, train_x, train_y, validate_x, validate_y, x, y, learning_rate=0.1,
-    batch_size=200, n_training_epochs=1000, L1_reg=0.0, L2_reg=0.0001)
+    layer2, train_x, train_y, validate_x, validate_y, x, y, learning_rate=0.1,
+    batch_size=batch_size, n_training_epochs=1000, L1_reg=0.0, L2_reg=0.0001)
 
-predict_proba = theano.function([x], lr.p_of_y_given_x)
+predict_proba = theano.function([x], layer2.p_of_y_given_x)
 
 print("Loading test set..")
 images = np.array(os.listdir('data/test_normalized'))
 test = np.array([os.path.join('data/test_normalized', filename)
                 for filename in os.listdir('data/test_normalized')])
 test_set_x = np.array(imread_collection(test, conserve_memory=False)) / 255
-test_set_x = test_set_x.reshape((len(test_set_x), -1))
 probabilities = predict_proba(test_set_x)
 submission = DataFrame(
     data=probabilities,
