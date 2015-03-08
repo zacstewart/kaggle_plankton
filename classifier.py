@@ -81,17 +81,36 @@ stochastic_gradient_descent(
     layer2, train_x, train_y, validate_x, validate_y, x, y, learning_rate=0.1,
     batch_size=batch_size, n_training_epochs=1000, L1_reg=0.0, L2_reg=0.0001)
 
-predict_proba = theano.function([x], layer2.p_of_y_given_x)
 
 print("Loading test set..")
 images = np.array(os.listdir('data/test_normalized'))
 test = np.array([os.path.join('data/test_normalized', filename)
                 for filename in os.listdir('data/test_normalized')])
 test_set_x = np.array(imread_collection(test, conserve_memory=False)) / 255
-probabilities = predict_proba(test_set_x)
+
+n_test_batches = int(np.ceil(len(test_set_x) / batch_size))
+
+print("Building network symbolic graph...")
+
+test_set_x = theano.shared(
+    value=test_set_x.astype(config.floatX), name='test_set_x')
+index = T.lscalar()
+predict_proba = theano.function(
+    inputs=[index],
+    outputs=layer2.p_of_y_given_x,
+    givens={
+        x: test_set_x[(index * batch_size):((index + 1) * batch_size)],
+    })
+
+all_probabilities = []
+for batch_index in range(n_test_batches):
+    batch_probabilities = predict_proba(batch_index)
+    all_probabilities.append(batch_probabilities)
+all_probabilities = np.vstack(all_probabilities)
+
 submission = DataFrame(
-    data=probabilities,
     columns=list(map(lambda i: i_to_class[i], range(len(classes)))))
+    data=all_probabilities,
 submission['image'] = images
 submission.to_csv('submission.csv', index=False)
 
