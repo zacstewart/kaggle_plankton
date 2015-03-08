@@ -6,6 +6,7 @@ from pandas import DataFrame
 from skimage.io import imread_collection
 from theano import config
 from theano import tensor as T
+import data
 import numpy as np
 import os
 import theano
@@ -41,8 +42,8 @@ validate_y = np.array(list(map(lambda y: class_to_i[y], validate_y)), dtype=np.i
 
 print("Reading train images...")
 
-train_x = np.array(imread_collection(train_x, conserve_memory=False)) / 255
-validate_x = np.array(imread_collection(validate_x, conserve_memory=False)) / 255
+train_x = np.array(imread_collection(train_x, conserve_memory=False)) / 256
+validate_x = np.array(imread_collection(validate_x, conserve_memory=False)) / 256
 validate_x = validate_x.reshape((-1, 1, 106, 106))  # 1-color feature map
 train_x = train_x.reshape((-1, 1, 106, 106))  # 1-color feature map
 
@@ -79,21 +80,22 @@ layer2 = MultilayerPerceptron(
 print("Training network...")
 stochastic_gradient_descent(
     layer2, train_x, train_y, validate_x, validate_y, x, y, learning_rate=0.1,
-    batch_size=batch_size, n_training_epochs=1000, L1_reg=0.0, L2_reg=0.0001)
+    batch_size=batch_size, n_training_epochs=1, L1_reg=0.0, L2_reg=0.0001)
 
 
 print("Loading test set..")
 images = np.array(os.listdir('data/test_normalized'))
-test = np.array([os.path.join('data/test_normalized', filename)
-                for filename in os.listdir('data/test_normalized')])
-test_set_x = np.array(imread_collection(test, conserve_memory=False)) / 255
+test_file_names = np.array([os.path.join('data/test_normalized', filename)
+                           for filename in os.listdir('data/test_normalized')])
 
-n_test_batches = int(np.ceil(len(test_set_x) / batch_size))
 
 print("Building network symbolic graph...")
 
+chunk_size = 5000
 test_set_x = theano.shared(
-    value=test_set_x.astype(config.floatX), name='test_set_x')
+    value=np.zeros((1, 1, 1, 1), dtype=config.floatX),
+    borrow=True,
+    name='test_set_x')
 index = T.lscalar()
 predict_proba = theano.function(
     inputs=[index],
@@ -102,15 +104,21 @@ predict_proba = theano.function(
         x: test_set_x[(index * batch_size):((index + 1) * batch_size)],
     })
 
+print("Predicting...")
+
 all_probabilities = []
-for batch_index in range(n_test_batches):
-    batch_probabilities = predict_proba(batch_index)
-    all_probabilities.append(batch_probabilities)
+for test_x_data in data.chunk_generator(test_file_names, chunk_size):
+    this_chunk_size = min(chunk_size, test_x_data.shape[0])
+    n_test_batches = int(np.ceil(this_chunk_size / batch_size))
+    test_set_x.set_value(test_x_data.astype(config.floatX))
+    for batch_index in range(n_test_batches):
+        batch_probabilities = predict_proba(batch_index)
+        all_probabilities.append(batch_probabilities)
 all_probabilities = np.vstack(all_probabilities)
 
 submission = DataFrame(
-    columns=list(map(lambda i: i_to_class[i], range(len(classes)))))
-    data=all_probabilities,
+    columns=list(map(lambda i: i_to_class[i], range(len(classes)))),
+    data=all_probabilities)
 submission['image'] = images
 submission.to_csv('submission.csv', index=False)
 

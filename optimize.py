@@ -15,13 +15,21 @@ def stochastic_gradient_descent(
     validation_frequency = min(n_train_batches, patience / 2)
 
     train_set_x = theano.shared(
-        value=train_set_x.astype(config.floatX), name='train_set_x')
+        borrow=True,
+        value=train_set_x.astype(config.floatX),
+        name='train_set_x')
     train_set_y = theano.shared(
-        value=train_set_y, name='train_set_y')
+        borrow=True,
+        value=train_set_y,
+        name='train_set_y')
     validate_set_x = theano.shared(
-        value=validate_set_x.astype(config.floatX), name='validate_set_x')
+        borrow=True,
+        value=validate_set_x.astype(config.floatX),
+        name='validate_set_x')
     validate_set_y = theano.shared(
-        value=validate_set_y, name='validate_set_y')
+        borrow=True,
+        value=validate_set_y,
+        name='validate_set_y')
 
     index = T.lscalar()
 
