@@ -80,7 +80,7 @@ layer2 = MultilayerPerceptron(
 print("Training network...")
 stochastic_gradient_descent(
     layer2, train_x, train_y, validate_x, validate_y, x, y, learning_rate=0.1,
-    batch_size=batch_size, n_training_epochs=1, L1_reg=0.0, L2_reg=0.0001)
+    batch_size=batch_size, n_training_epochs=1000, L1_reg=0.0, L2_reg=0.0001)
 
 
 print("Loading test set..")
