@@ -9,7 +9,7 @@ def stochastic_gradient_descent(
         learning_rate, batch_size, n_training_epochs,
         patience_increase=2, improvement_threshold=0.995, **cost_kwargs):
 
-    patience = 10000
+    patience = 100000
     n_train_batches = train_set_x.shape[0] // batch_size
     n_validate_batches = validate_set_x.shape[0] // batch_size
     validation_frequency = min(n_train_batches, patience / 2)
