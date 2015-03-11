@@ -37,15 +37,21 @@ classes = list(set(train_y))
 classes.sort()
 i_to_class = dict(zip(range(len(classes)), classes))
 class_to_i = {c: i for i, c in i_to_class.items()}
-train_y = np.array(list(map(lambda y: class_to_i[y], train_y)), dtype=np.int32)
-validate_y = np.array(list(map(lambda y: class_to_i[y], validate_y)), dtype=np.int32)
+train_y = np.array(
+    list(map(lambda y: class_to_i[y], train_y)), dtype=np.int32)
+validate_y = np.array(
+    list(map(lambda y: class_to_i[y], validate_y)), dtype=np.int32)
 
 print("Reading train images...")
 
-train_x = np.array(imread_collection(train_x, conserve_memory=False)) / 256
-validate_x = np.array(imread_collection(validate_x, conserve_memory=False)) / 256
-validate_x = validate_x.reshape((-1, 1, 106, 106))  # 1-color feature map
-train_x = train_x.reshape((-1, 1, 106, 106))  # 1-color feature map
+train_x = np.array(imread_collection(train_x, conserve_memory=False))
+validate_x = np.array(imread_collection(validate_x, conserve_memory=False))
+# 0-1 pixel intensities intead of 0-255
+train_x /= 256
+validate_x /= 256
+# 1-color feature map
+train_x = train_x.reshape((-1, 1, 106, 106))
+validate_x = validate_x.reshape((-1, 1, 106, 106))
 
 print("Building network symbolic graph...")
 
